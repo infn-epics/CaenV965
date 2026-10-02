@@ -1,0 +1,37 @@
+file perChannel.template {
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=0, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=1, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=2, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=3, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=4, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=5, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=6, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=7, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=8, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=9, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=10, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=11, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=12, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=13, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=14, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=15, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=16, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=17, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=18, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=19, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=20, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=21, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=22, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=23, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=24, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=25, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=26, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=27, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=28, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=29, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=30, ESLO=0.1, HOPR=400 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=31, ESLO=0.1, HOPR=400 }
+}
+file perCard.template{
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)" }
+}

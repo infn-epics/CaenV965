@@ -3,8 +3,7 @@ TOP = .
 include $(TOP)/configure/CONFIG
 DIRS := $(DIRS) $(filter-out $(DIRS), configure)
 DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard *Sup))
-DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard *App))
-DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard iocBoot))
+# the 3.14 test IOC (caenV965TestApp, iocBoot) is not built
 
 define DIR_template
  $(1)_DEPEND_DIRS = configure

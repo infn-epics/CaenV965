@@ -3,6 +3,15 @@
  *
  * Author: W. Eric Norum
  * "2011/02/22 17:11:35 (UTC)"
+ *
+ * INFN changes:
+ *  - register access with epicsMMIO native accessors instead of the RTEMS
+ *    PowerPC in_be/out_be macros: correct on big endian CPUs and on boards
+ *    with hardware VME byte swapping (e.g. VMIVME-7750, RTEMS-pc686)
+ *  - A24 or A32 base address (A32 if above 0xFFFFFF)
+ *  - CAEN V792 (32 channel QDC, single range)
+ *  - event counter on its own asyn address (A_EVENT_COUNT), still also on
+ *    address 16 for 16 channel cards
  */
 
 /************************************************************************\
@@ -26,9 +35,9 @@
 #include <devLib.h>
 #include <asynDriver.h>
 #include <asynInt32.h>
-#include <libcpu/io.h>  /* RTEMS I/O macros */
+#include <epicsMMIO.h>
 
-#define MAX_CHANNEL_COUNT   16
+#define MAX_CHANNEL_COUNT   32
 #define MESSAGE_QUEUE_COUNT ((2 * MAX_CHANNEL_COUNT) + 2)
 
 /*
@@ -41,6 +50,8 @@
 #define A_PIGGYBACK_REVISION    1004
 #define A_PEDESTAL_CURRENT      1008
 #define A_SOFTWARE_TRIGGER      1009
+#define A_EVENT_COUNT           1005
+#define A_EVENT_COUNT_V965      16    /* compatibility with CaenV965 1.0 */
 #define A_DEBUGGING             2000
 
 /*
@@ -60,6 +71,8 @@
 #define MEB_CHANNEL_SHIFT_V965A        18
 #define MEB_SHIFTED_CHANNEL_MASK_V965A 0x7
 #define MEB_RANGE_MASK_V965A           0x00020000
+#define MEB_CHANNEL_SHIFT_V792         16
+#define MEB_SHIFTED_CHANNEL_MASK_V792  0x1F
 #define MEB_UNDERFLOW_MASK             0x00002000
 #define MEB_OVERFLOW_MASK              0x00001000
 #define MEB_DATA_MASK                  0x00000FFF
@@ -96,9 +109,10 @@
 #define B2_SLIDE_ENABLE              0x0080
 
 struct dpvt {
-    epicsUInt32             a24;
+    epicsUInt32             vmeAddress;
+    epicsAddressType        addressType;
     char                   *baseAddress;   /* Register base in CPU space */
-    enum                    cardType { v965, v965a } cardType;
+    enum                    cardType { v965, v965a, v792 } cardType;
     int                     channelCount;
     int                     channelShift;
     int                     shiftedChannelMask;
@@ -124,17 +138,17 @@ struct dpvt {
 static epicsUInt16
 get16(struct dpvt *dpvt, int offset)
 {
-    return in_be16((epicsUInt16 *)(dpvt->baseAddress + offset));
+    return nat_ioread16(dpvt->baseAddress + offset);
 }
 static void
 put16(struct dpvt *dpvt, int offset, epicsUInt16 value)
 {
-    return out_be16((epicsUInt16 *)(dpvt->baseAddress + offset), value);
+    nat_iowrite16(dpvt->baseAddress + offset, value);
 }
 static epicsUInt32
 get32(struct dpvt *dpvt, int offset)
 {
-    return in_be32((epicsUInt32 *)(dpvt->baseAddress + offset));
+    return nat_ioread32(dpvt->baseAddress + offset);
 }
 
 /*
@@ -143,13 +157,16 @@ get32(struct dpvt *dpvt, int offset)
 static
 int highRangeThresholdRegister(struct dpvt *dpvt, int channel)
 {
+    /* V792: one threshold per channel, 0x1080..0x10BF */
+    if (dpvt->cardType == v792) return 0x1080+(2*channel);
     if (dpvt->cardType == v965) return 0x1080+(4*channel);
     else                        return 0x1080+(8*channel);
 }
-
 static
 int lowRangeThresholdRegister(struct dpvt *dpvt, int channel)
 {
+    /* single range cards have no low range threshold */
+    if (dpvt->cardType == v792) return -1;
     if (dpvt->cardType == v965) return 0x1082+(4*channel);
     else                        return 0x1084+(8*channel);
 }
@@ -206,7 +223,8 @@ handlerThread(void *arg)
     epicsUInt32 hiRangeRaw[MAX_CHANNEL_COUNT];
     epicsUInt32 lowRangeRaw[MAX_CHANNEL_COUNT];
     epicsUInt32 eventCount;
-    int haveLoRangeRaw, haveHiRangeRaw, haveEventCount;
+    epicsUInt32 haveLoRangeRaw, haveHiRangeRaw;
+    int haveEventCount;
     ELLLIST *pclientList;
     interruptNode *pnode;
 
@@ -228,15 +246,17 @@ handlerThread(void *arg)
                 asynPrint(dpvt->debugAsynUser, ASYN_TRACEIO_DRIVER,
                                             "%s: START -- COUNT %d\n",
                                             dpvt->portName, (v >> 8) & 0x3F);
+                break;  /* the header is not a data word (was a fall through) */
+
             case MEB_OPCODE_DATA:
                 channel = (v >> dpvt->channelShift) & dpvt->shiftedChannelMask;
                 if (v & dpvt->rangeMask) {
                     lowRangeRaw[channel] = v;
-                    haveLoRangeRaw |= (1 << channel);
+                    haveLoRangeRaw |= (1u << channel);
                 }
                 else {
                     hiRangeRaw[channel] = v;
-                    haveHiRangeRaw |= (1 << channel);
+                    haveHiRangeRaw |= (1u << channel);
                 }
                 asynPrint(dpvt->debugAsynUser, ASYN_TRACEIO_DRIVER,
                                     "%s: %8.8X CHAN %d %s%s%s: %d\n",
@@ -265,8 +285,8 @@ handlerThread(void *arg)
         while (pnode) {
             asynInt32Interrupt *pint32Interrupt = pnode->drvPvt;
             unsigned int addr = pint32Interrupt->addr;
-            int bit = 1 << addr;
-            if ((addr < dpvt->channelCount)
+            epicsUInt32 bit = (addr < 32) ? (1u << addr) : 0;
+            if ((addr < (unsigned int) dpvt->channelCount)
              && ((haveHiRangeRaw & bit) || (haveLoRangeRaw & bit))) {
                 int value = 32768;
                 if ((haveLoRangeRaw & bit)
@@ -275,13 +295,17 @@ handlerThread(void *arg)
                 }
                 else if ((haveHiRangeRaw & bit)
                       && (((v = hiRangeRaw[addr]) & MEB_OVERFLOW_MASK) == 0)) {
-                    value = (v & MEB_DATA_MASK) * 8;
+                    value = (v & MEB_DATA_MASK);
+                    if (dpvt->rangeMask)
+                        value *= 8;   /* V965 high range is 8 times coarser */
                 }
                 pint32Interrupt->callback(pint32Interrupt->userPvt,
                                           pint32Interrupt->pasynUser,
                                           value);
             }
-            else if ((addr == MAX_CHANNEL_COUNT) && haveEventCount) {
+            else if (((addr == A_EVENT_COUNT)
+                   || ((addr == A_EVENT_COUNT_V965) && (dpvt->channelCount <= 16)))
+                  && haveEventCount) {
                 pint32Interrupt->callback(pint32Interrupt->userPvt,
                                           pint32Interrupt->pasynUser,
                                           eventCount);
@@ -296,13 +320,13 @@ handlerThread(void *arg)
  * asynCommon methods
  */
 static asynStatus
-connect(void *drvPvt, asynUser *pasynUser)
+caenConnect(void *drvPvt, asynUser *pasynUser)
 {
     pasynManager->exceptionConnect(pasynUser);
     return asynSuccess;
 }
 static asynStatus
-disconnect(void *drvPvt, asynUser *pasynUser)
+caenDisconnect(void *drvPvt, asynUser *pasynUser)
 {
     pasynManager->exceptionDisconnect(pasynUser);
     return asynSuccess;
@@ -321,10 +345,13 @@ report(void *drvPvt, FILE *fp, int details)
     struct dpvt *dpvt = (struct dpvt *)drvPvt;
     int i;
 
-    fprintf(fp, "Port:%s  A24 address:%#X  CPU space address:%p\n",
-                                                            dpvt->portName,
-                                                            dpvt->a24,
-                                                            dpvt->baseAddress);
+    fprintf(fp, "Port:%s  %s address:%#X  CPU space address:%p  V%s\n",
+                                    dpvt->portName,
+                                    dpvt->addressType == atVMEA32 ? "A32" : "A24",
+                                    (unsigned) dpvt->vmeAddress,
+                                    dpvt->baseAddress,
+                                    dpvt->cardType == v792 ? "792" :
+                                    dpvt->cardType == v965a ? "965A" : "965");
     if (details >= 1) {
         showCount (fp, "Message buffer overflow", dpvt->messageBufferOverflowCount);
         showCount (fp, "Message queue overflow", dpvt->messageQueueOverflowCount);
@@ -343,13 +370,17 @@ report(void *drvPvt, FILE *fp, int details)
         fprintf(fp, "             Thresholds\n");
         fprintf(fp, "   Chan  Lo-range  Hi-range\n");
         for (i = 0 ; i < dpvt->channelCount ; i++) {
-            fprintf(fp, "    %3d    %#6.4X    %#6.4X\n", i,
-                            get16(dpvt, lowRangeThresholdRegister(dpvt, i)),  
+            if (dpvt->rangeMask)
+                fprintf(fp, "    %3d    %#6.4X    %#6.4X\n", i,
+                            get16(dpvt, lowRangeThresholdRegister(dpvt, i)),
+                            get16(dpvt, highRangeThresholdRegister(dpvt, i)));
+            else
+                fprintf(fp, "    %3d         -    %#6.4X\n", i,
                             get16(dpvt, highRangeThresholdRegister(dpvt, i)));
         }
     }
 }
-static asynCommon asynCommonMethods = { report, connect, disconnect };
+static asynCommon asynCommonMethods = { report, caenConnect, caenDisconnect };
 
    
 /*
@@ -445,7 +476,7 @@ static asynInt32 asynInt32Methods = { int32Write, int32Read, getBounds };
  * Configure a card
  */
 static void
-caenV965Configure(const char *portName, const char *ct, epicsInt32 a24, epicsInt32 vector, epicsInt32 level, unsigned int priority)
+caenV965Configure(const char *portName, const char *ct, epicsUInt32 vmeAddress, epicsInt32 vector, epicsInt32 level, unsigned int priority)
 {
     struct dpvt *dpvt;
     int i;
@@ -453,25 +484,26 @@ caenV965Configure(const char *portName, const char *ct, epicsInt32 a24, epicsInt
     epicsUInt16 rbuf;
     asynStatus status;
     enum cardType cardType;
+    epicsAddressType addressType;
+    int boardId;
 
     /*
      * Check arguments
      */
     if (epicsStrCaseCmp(ct, "V965") == 0) cardType = v965;
     else if (epicsStrCaseCmp(ct, "V965A") == 0) cardType = v965a;
+    else if (epicsStrCaseCmp(ct, "V792") == 0) cardType = v792;
     else {
-        errlogPrintf("Card type must be V965 or V965A.\n");
+        errlogPrintf("Card type must be V965, V965A or V792.\n");
         return;
     }
-    if ((a24 & 0xFFFF) != 0) {
+    if ((vmeAddress & 0xFFFF) != 0) {
         errlogPrintf("Address must be a multiple of 65536 (0x10000).\n");
         return;
     }
-    if ((a24 < 0) || (a24 > 0xFF0000)) {
-        errlogPrintf("Address out of range.\n");
-        return;
-    }
-    if (devRegisterAddress("caenV965", atVMEA24, a24, 65536, &addr) != 0) {
+    /* A24 (rotary switches A23..A16) or A32 (all switches) */
+    addressType = (vmeAddress > 0xFF0000) ? atVMEA32 : atVMEA24;
+    if (devRegisterAddress("caenV965", addressType, vmeAddress, 65536, &addr) != 0) {
         errlogPrintf("Can't register VME address.\n");
         return;
     }
@@ -500,7 +532,8 @@ caenV965Configure(const char *portName, const char *ct, epicsInt32 a24, epicsInt
      */
     dpvt = (struct dpvt *)callocMustSucceed(1, sizeof *dpvt, "caenV965");
     dpvt->portName = epicsStrDup(portName);
-    dpvt->a24 = a24;
+    dpvt->vmeAddress = vmeAddress;
+    dpvt->addressType = addressType;
     dpvt->baseAddress = (char *)addr;
     dpvt->interruptMessageQueue = epicsMessageQueueCreate(100,
                                     MESSAGE_QUEUE_COUNT * sizeof(epicsUInt32));
@@ -519,6 +552,13 @@ caenV965Configure(const char *portName, const char *ct, epicsInt32 a24, epicsInt
         dpvt->shiftedChannelMask = MEB_SHIFTED_CHANNEL_MASK_V965A;
         dpvt->rangeMask = MEB_RANGE_MASK_V965A;
         break;
+
+    case v792:
+        dpvt->channelCount = 32;
+        dpvt->channelShift = MEB_CHANNEL_SHIFT_V792;
+        dpvt->shiftedChannelMask = MEB_SHIFTED_CHANNEL_MASK_V792;
+        dpvt->rangeMask = 0;     /* single range */
+        break;
     }
 
     /*
@@ -534,11 +574,15 @@ caenV965Configure(const char *portName, const char *ct, epicsInt32 a24, epicsInt
      || ((rbuf & 0xFF) != 0x00)
      || (devReadProbe(sizeof rbuf, (char *)addr + (i = 0x803A), &rbuf) != 0)
      || ((rbuf & 0xFF) != 0x03)
-     || (devReadProbe(sizeof rbuf, (char *)addr + (i = 0x803E), &rbuf) != 0)
-     || ((rbuf & 0xFF) != 0xC5)) {
-        errlogPrintf("Card at that address is not a CAEN V965 (offset:%#X value:%#X).\n", i, rbuf);
+     || (devReadProbe(sizeof rbuf, (char *)addr + (i = 0x803E), &rbuf) != 0)) {
+        errlogPrintf("Card at that address is not a CAEN board (offset:%#X value:%#X).\n", i, rbuf);
         return;
      }
+    boardId = 0x300 | (rbuf & 0xFF);
+    if (boardId != ((cardType == v792) ? 792 : 965)) {
+        errlogPrintf("Card at that address is a CAEN V%d, not a %s.\n", boardId, ct);
+        return;
+    }
 
     /*
      * Register with ASYN
@@ -607,8 +651,15 @@ caenV965Configure(const char *portName, const char *ct, epicsInt32 a24, epicsInt
      * Speeds up readout of low-current channels.
      */
     for (i = 0 ; i < dpvt->channelCount ; i++) {
-        put16(dpvt, lowRangeThresholdRegister(dpvt, i), 0);
-        put16(dpvt, highRangeThresholdRegister(dpvt, i), 0x100 | (496/16));
+        if (dpvt->rangeMask) {
+            put16(dpvt, lowRangeThresholdRegister(dpvt, i), 0);
+            put16(dpvt, highRangeThresholdRegister(dpvt, i), 0x100 | (496/16));
+        }
+        else {
+            /* single range: keep all conversions (the 0x100 kill bit
+             * would disable the channel) */
+            put16(dpvt, highRangeThresholdRegister(dpvt, i), 0);
+        }
     }
     put16(dpvt, R_INTERRUPT_LEVEL, level);
     put16(dpvt, R_INTERRUPT_VECTOR, vector);
@@ -620,7 +671,7 @@ caenV965Configure(const char *portName, const char *ct, epicsInt32 a24, epicsInt
  */
 static const iocshArg caenV965ConfigureArg0 = { "Portname",iocshArgString};
 static const iocshArg caenV965ConfigureArg1 = { "Card Type",iocshArgString};
-static const iocshArg caenV965ConfigureArg2 = { "A24 address",iocshArgInt};
+static const iocshArg caenV965ConfigureArg2 = { "A24 or A32 address",iocshArgInt};
 static const iocshArg caenV965ConfigureArg3 = { "interrupt vector",iocshArgInt};
 static const iocshArg caenV965ConfigureArg4 = { "interrupt level",iocshArgInt};
 static const iocshArg caenV965ConfigureArg5 = { "priority",iocshArgInt};

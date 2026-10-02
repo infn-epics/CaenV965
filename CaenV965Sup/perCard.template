@@ -54,7 +54,7 @@ record(longin, "$(P)$(R)EventCount")
 {
     field(DESC, "Event counter")
     field(DTYP, "asynInt32")
-    field(INP,  "@asyn($(PORT) 16 0)")
+    field(INP,  "@asyn($(PORT) 1005 0)")
     field(SCAN, "I/O Intr")
     field(LOPR, "0")
     field(HOPR, "16777215")
