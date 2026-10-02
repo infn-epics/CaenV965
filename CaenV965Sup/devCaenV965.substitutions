@@ -1,0 +1,21 @@
+file perChannel.template {
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=0 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=1 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=2 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=3 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=4 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=5 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=6 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=7 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=8 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=9 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=10 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=11 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=12 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=13 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=14 }
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)", CHAN=15 }
+}
+file perCard.template{
+    { P="\$(P)", R="\$(R)", PORT="\$(PORT)" }
+}

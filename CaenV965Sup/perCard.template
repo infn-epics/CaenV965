@@ -1,0 +1,70 @@
+record(longin, "$(P)$(R)FirmwareRev")
+{
+    field(DESC, "Firmware revision")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 1000 0)")
+    field(PINI, "YES")
+}
+record(longin, "$(P)$(R)SerialNo")
+{
+    field(DESC, "Serial number")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 1001 0)")
+    field(PINI, "YES")
+}
+record(longin, "$(P)$(R)Version")
+{
+    field(DESC, "Version number")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 1002 0)")
+    field(PINI, "YES")
+}
+record(longin, "$(P)$(R)MotherRev")
+{
+    field(DESC, "Motherboard revision number")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 1003 0)")
+    field(PINI, "YES")
+}
+record(longin, "$(P)$(R)PiggyRev")
+{
+    field(DESC, "Piggyback revision number")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 1004 0)")
+    field(PINI, "YES")
+}
+
+record(ao, "$(P)$(R)Iped")
+{
+    field(DESC, "Pedestal current")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 1008 0)")
+    field(EGU,  "uA")
+    field(LINR, "SLOPE")
+    field(EOFF, "-7.5")
+    field(ESLO, "0.5")
+    field(LOPR, "0")
+    field(HOPR, "120")
+    field(DRVL, "0")
+    field(DRVH, "120")
+    field(PREC, "1")
+}
+
+record(longin, "$(P)$(R)EventCount")
+{
+    field(DESC, "Event counter")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 16 0)")
+    field(SCAN, "I/O Intr")
+    field(LOPR, "0")
+    field(HOPR, "16777215")
+}
+
+record(bo, "$(P)$(R)SoftTrigger")
+{
+    field(DESC, "Software trigger")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 1009 0)")
+    field(ZNAM, "Trigger")
+    field(ONAM, "Trigger")
+}

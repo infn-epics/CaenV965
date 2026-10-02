@@ -1,0 +1,2 @@
+registrar(caenV965_RegisterCommands)
+include "asyn.dbd"

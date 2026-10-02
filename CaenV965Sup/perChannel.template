@@ -1,0 +1,13 @@
+record(ai, "$(P)$(R)chan$(CHAN)")
+{
+    field(DESC, "Channel $(CHAN) readout")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) $(CHAN) 0)")
+    field(EGU,  "pC")
+    field(LINR, "SLOPE")
+    field(ESLO, "0.025")
+    field(PREC, "2")
+    field(LOPR, "0")
+    field(HOPR, "900")
+    field(SCAN, "I/O Intr")
+}

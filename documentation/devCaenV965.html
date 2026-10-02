@@ -1,0 +1,248 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type"
+ content="text/html; charset=ISO-8859-1">
+  <title>Caen V695 Instrument Support</title>
+  <meta name="generator"
+ content="amaya 8.5, see http://www.w3.org/Amaya/">
+</head>
+<body>
+<h1>Introduction</h1>
+<p>This support module provides ASYN Int32 support to control and
+acquire data from Caen V965 charge-to-digital converer modules.<br>
+</p>
+<h1>Using Caen V965 support in an application</h1>
+<p>Several files need minor modifications to use this
+support in
+an application.</p>
+<ol>
+  <li>Add the full path to the CAENV965 support directory to the
+application <tt>configure/RELEASE</tt> file:<br>
+    <tt>CAENV965</tt><tt>=</tt><em>xxxx</em><tt>/modules/analog/CAENV965/&lt;release&gt;</tt><br>
+Where <tt>&lt;release&gt;</tt> is the release number of of the
+CAENV965 support.</li>
+  <li>Add support to application database definition file<br>
+The application database definition file must include the database
+definition files for the CAENV965.&nbsp; There are two ways that this
+can be done:
+    <ul>
+      <li>If you are building your application database definition file
+from an <em>xxx</em><tt>Include.dbd</tt> file you include the
+additional database definitions in that file:<br>
+        <tt>include "base.dbd"</tt><br>
+        <tt>include "devCAENV965.dbd"</tt><br>
+      </li>
+      <li>If you are building your application database definition file
+from the application Makefile you specify the aditional database
+definitions there:<br>
+        <em>xxx</em><tt>_DBD += base.dbd</tt><br>
+        <em>xxx</em><tt>_DBD += devCAENV965.dbd</tt><br>
+      </li>
+    </ul>
+  </li>
+  <li>Add the CAENV965 support libraries to the application<br>
+You must link the CAENV965 support library and the ASYN support library
+with the application. Add the following lines: <br>
+    <em>xxx</em><tt>_LIBS += devCAENV965</tt><br>
+    <em>xxx</em><tt>_LIBS += asyn</tt><br>
+before the <br>
+    <em>xxx</em><tt>_LIBS += $(EPICS_BASE_IOC_LIBS)</tt><br>
+to the application Makefile.</li>
+  <li>Specify the Caen V965 configuration in the application startup
+script file with a line like<br>
+    <tt>CaenV965Configure("</tt><em>&lt;PORT&gt;</em><tt>", </tt><em>&lt;A24
+address&gt;</em><tt>, </tt><em>&lt;vector number&gt;</em><tt>, </tt><em>&lt;VME
+interrupt
+level&gt;</em><tt>)</tt><tt>, </tt><em>&lt;priority&gt;</em><tt>)</tt><br>
+The VME interrupt level argument can be omitted in which case level 5
+will be used.<br>
+The priority argument can be omitted in which case a priority just
+above epicsThreadPriortyMedium will be used.<br>
+  </li>
+  <li>The Caen V965 support module provides an example database.&nbsp;
+To use this add<br>
+    <span style="font-family: monospace;">DB_INSTALLS += $(</span><tt
+ style="font-family: monospace;">CAENV965)/db/</tt><tt><span
+ style="font-family: monospace;">devCAENV965.db</span><br>
+    </tt>to the application <span style="font-style: italic;">xxx</span>/Db/Makefile
+and
+add<br>
+    <tt>dbLoadRecords("db/devCAENV965.db,"P=</tt><em>&lt;P&gt;</em><tt>,R=</tt><em>&lt;R&gt;</em><tt>,PORT=</tt><em>&lt;PORT&gt;</em><tt>")</tt><br>
+to the application startup script.&nbsp; You'll have to provide
+appropriate values for the PV name prefixes (<em>&lt;P&gt;</em> and <em>&lt;R&gt;</em>)
+and
+the
+port
+name(<em>&lt;PORT&gt;</em>). The port name must match the
+value specified in the <tt>CAENV965Configure</tt> command. </li>
+</ol>
+<h1>Database Development</h1>
+<h2>Output Records<br>
+</h2>
+Set
+DTYP=asynInt32 and OUT="@asyn($(PORT) <span style="font-style: italic;">xxx</span>)",
+where
+<span style="font-style: italic;"></span> $(PORT) expands to the
+port name in the CAENV965Configure command and <span
+ style="font-style: italic;">xxx</span> is a numeric value as described
+in the following table.&nbsp; <br>
+<br>
+<table
+ style="text-align: left; width: 80%; margin-left: auto; margin-right: auto;"
+ border="1" cellpadding="2" cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="text-align: center; width: 100px;">ASYN<br>
+Subaddress<br>
+      </th>
+      <td style="text-align: center; width: 90px;"><span
+ style="font-weight: bold;">Record<br>
+Type</span><br>
+      </td>
+      <th
+ style="vertical-align: middle; text-align: center; width: 200px;">Description<br>
+      </th>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; text-align: center;">1008<br>
+      </td>
+      <td style="text-align: center;">ao<br>
+      </td>
+      <td style="vertical-align: top;">Pedestal current<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: center; vertical-align: top;">1009<br>
+      </td>
+      <td style="text-align: center; vertical-align: top;">bo<br>
+      </td>
+      <td style="vertical-align: top;">Generate software trigger when
+processed.<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<br>
+<h2>Input Records<br>
+</h2>
+Set
+DTYP=asynInt32 and INP="@asyn($(PORT) <span style="font-style: italic;">xxx</span>)",
+where
+<span style="font-style: italic;"></span> $(PORT) expands to the
+port name in the CAENV965Configure command and <span
+ style="font-style: italic;">xxx</span> is a numeric value as described
+in the following table.&nbsp; <br>
+<br>
+<table
+ style="text-align: left; width: 80%; margin-left: auto; margin-right: auto;"
+ border="1" cellpadding="2" cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="text-align: center;">ASYN<br>
+Subaddress<br>
+      </th>
+      <td style="text-align: center; vertical-align: top;"><span
+ style="font-weight: bold;">Record</span><br style="font-weight: bold;">
+      <span style="font-weight: bold;">Typ</span>e<br>
+      </td>
+      <th style="vertical-align: middle; text-align: center;">Description<br>
+      </th>
+    </tr>
+    <tr>
+      <td style="vertical-align: middle; text-align: center;">0&#8211;15<br>
+      </td>
+      <td style="text-align: center; vertical-align: middle;">ai<br>
+      </td>
+      <td style="vertical-align: top;">The converted values from each
+of the input channels (SCAN=I/O Intr)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: middle; text-align: center;">16<br>
+      </td>
+      <td style="text-align: center; vertical-align: top;">longin<br>
+      </td>
+      <td style="vertical-align: top;">The event counter (SCAN=I/O Intr)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: center; vertical-align: top;">1000<br>
+      </td>
+      <td style="text-align: center; vertical-align: top;">longin<br>
+      </td>
+      <td style="vertical-align: top;">Firmware revision number<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; text-align: center;">1001<br>
+      </td>
+      <td style="text-align: center; vertical-align: top;">longin<br>
+      </td>
+      <td style="vertical-align: top;">Serial number<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; text-align: center;">1002<br>
+      </td>
+      <td style="vertical-align: top; text-align: center;">longin<br>
+      </td>
+      <td style="vertical-align: top; text-align: left;">Version number<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; text-align: center;">1003<br>
+      </td>
+      <td style="vertical-align: top; text-align: center;">longin<br>
+      </td>
+      <td style="vertical-align: top;">Motherboard revision number<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; text-align: center;">1004<br>
+      </td>
+      <td style="vertical-align: top; text-align: center;">longin<br>
+      </td>
+      <td style="vertical-align: top;">Piggyback board revision number<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<span style="font-weight: bold;"><br>
+</span>
+<h2>Diagnostic Messages<br>
+</h2>
+&nbsp;
+The CAEN V965 support includes a worker thread which handles messages
+passed from an interrupt service routine.&nbsp; To control diagnostic
+messages from this thread use an ASYN record with subaddress 2000 and
+the traceIODriver bit in the trace mask.<br>
+<br>
+<h2>Example Database<br>
+</h2>
+This support module comes with
+an example database (<tt style="font-family: monospace;">db/</tt><tt><span
+ style="font-family: monospace;">devCAENV965.db</span></tt>) containing
+an instance of all the records mentioned above.<br>
+<br>
+<h1>Installation and Building</h1>
+After obtaining a copy of the distribution, it must be installed and
+built
+for use at your site.
+<ol>
+  <li>Create an installation directory for the module. The path name of
+this directory should end with <tt>modules/instrument/CAENV965</tt>.</li>
+  <li>Place the distribution file into this directory.</li>
+  <li>Execute the following commands:<br>
+    <tt>cd modules/instrument/CAENV965</tt><br>
+    <tt>tar xfz CAENV965&lt;release&gt;.tar.gz</tt><br>
+    <tt>cd &lt;release&gt;</tt><br>
+Where <tt>&lt;release&gt;</tt> is the release number of of the
+CAENV965 support. </li>
+  <li>Edit the <tt>configure/RELEASE</tt> file and set the paths to
+your installation of EPICS base and ASYN.</li>
+  <li>Execute <tt>make</tt> in the top level directory.</li>
+</ol>
+</body>
+</html>
