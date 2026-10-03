@@ -21,5 +21,10 @@
 
 TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 
-ASYN       = /usr/local/epics/R3.14.12/modules/R0/soft/synApps_5_5/support/asyn4-16
-EPICS_BASE = /usr/local/epics/R3.14.12/base
+#ASYN       = /path/to/asyn
+#EPICS_BASE = /path/to/epics-base
+
+# Site paths (ASYN, EPICS_BASE) go in RELEASE.local, next to the module or in
+# this directory (the epics-containers ansible build provides it)
+-include $(TOP)/../RELEASE.local
+-include $(TOP)/configure/RELEASE.local
